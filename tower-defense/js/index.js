@@ -9,7 +9,6 @@ import {canvas, c} from './data/canvas.js';
 
 const grid = config.grid
 
-
 canvas.width = grid * config.numOfWidth
 canvas.height = grid * config.numOfHeight
 
