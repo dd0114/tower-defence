@@ -2,12 +2,28 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="2da0e85d-0dae-4820-a29c-edaf0fb2aefb" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/jsLibraryMappings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/img/card_cover.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/js/classes/Card.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/js/classes/Sprite.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/js/classes/SummonButton.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/test/classes/Card.test.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/js/classes/Buiding.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/classes/Buiding.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/js/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/index.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="JavaScript File" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -25,13 +41,18 @@
   "keyToString": {
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "WebServerToolWindowFactoryState": "false",
+    "javascript.nodejs.core.library.configured.version": "14.15.5",
+    "javascript.nodejs.core.library.typings.version": "14.18.63",
     "last_opened_file_path": "/Users/peter.park/Desktop/ehgusGit/tower-defence",
     "nodejs_package_manager_path": "npm"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/img" />
+      <recent name="$PROJECT_DIR$/test/classes" />
       <recent name="$PROJECT_DIR$" />
     </key>
   </component>
@@ -43,7 +64,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1739462025176</updated>
-      <workItem from="1739462026313" duration="186000" />
+      <workItem from="1739462026313" duration="26057000" />
     </task>
     <servers />
   </component>

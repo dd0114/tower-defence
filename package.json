@@ -1,0 +1,19 @@
+{
+  "name": "tower-defence",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "peter-park <peter.park@balancehero.com>",
+  "license": "MIT",
+  "description": "test",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "jest --watchAll --verbose"
+  },
+  "keywords": [],
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "jest": "^29.7.0"
+  }
+}
