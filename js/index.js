@@ -6,6 +6,9 @@ import {config} from './data/config.js';
 import {placementTilesData} from './data/placementTilesData.js';
 import {waypoints} from './data/waypoints.js';
 import {canvas, c} from './data/canvas.js';
+import {Hand, Deck, Card} from './classes/Card.js';
+import {SummonButton} from './classes/SummonButton.js';
+
 
 const grid = config.grid
 
@@ -38,8 +41,9 @@ function drawRoundedRect(ctx, x, y, width, height, radius) {
   ctx.fill();
 }
 
-const placementTiles = []
+const summonButton = new SummonButton();
 
+const placementTiles = []
 placementTilesData.forEach((row, y) => {
   row.forEach((symbol, x) => {
     if (symbol === 1) {
@@ -84,6 +88,10 @@ let coins = 100;
 let roundCount = 0
 const summonNum = 10
 
+const hand = new Hand()
+const deck = new Deck()
+let canEditCard = true
+
 function animate() {
   const animationId = requestAnimationFrame(animate);
 
@@ -97,7 +105,6 @@ function animate() {
 
     for (let i = 1; i < monsterNum +1 ; i++) {
       const yOffset = (i * grid * summonNum)/monsterNum
-      console.log(yOffset)
       enemies.push(
         new Enemy({
           position: {
@@ -131,6 +138,9 @@ function animate() {
   placementTiles.forEach((tile => {
     tile.update(mouse)
   }))
+
+  summonButton.update(mouse, hand.getHandRank())
+
 
   buildings.forEach((building => {
 
@@ -184,20 +194,34 @@ const mouse = {
   y: undefined
 }
 
-let cardPrice = 50
+let cardPrice = 10
 
 canvas.addEventListener('click', (event) => {
-  if (activeTile && !activeTile.isOccupied && coins >= cardPrice) {
+  if (activeTile && !activeTile.isOccupied && coins >= cardPrice && canEditCard) {
+    // 카드뽑기
+    canEditCard = false
+    let card = deck.draw();
+    hand.addCard(card);
+    canEditCard = true
+
     buildings.push(new Building({
       position: {
         x: activeTile.position.x,
         y: activeTile.position.y
       }
-    }))
+    }, card))
+
     activeTile.isOccupied = true
     coins -= cardPrice
     document.querySelector('#coins').innerHTML = coins
+
+    // console.log(hand)
+    // console.log(Building)
   }
+
+
+
+
   // console.log(buildings)
 })
 
