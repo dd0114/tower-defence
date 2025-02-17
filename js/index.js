@@ -6,9 +6,10 @@ import {config} from './data/config.js';
 import {placementTilesData} from './data/placementTilesData.js';
 import {waypoints} from './data/waypoints.js';
 import {canvas, c} from './data/canvas.js';
-import {Hand, Deck, Card} from './classes/Card.js';
+import {Hand, Deck, Card, HandRankResult} from './classes/Card.js';
 import {SummonButton} from './classes/SummonButton.js';
-
+import {RankTower} from './classes/RankTower.js';
+import {HandRank} from './enums/handRank.js';
 
 const grid = config.grid
 
@@ -81,6 +82,7 @@ function drawGrid() {
 const enemies = []
 const buildings = []
 let activeTile = undefined
+let isMouseInSummonButton = false
 
 let hearts = 3;
 let coins = 100;
@@ -100,18 +102,19 @@ function animate() {
   drawPlayerBoard()
 
   if (enemies.length === 0) {
-    roundCount +=1
-    const monsterNum = summonNum * (1 + (roundCount -1)/2)
+    roundCount += 1
+    const monsterNum = summonNum * (1 + (roundCount - 1) / 2)
 
-    for (let i = 1; i < monsterNum +1 ; i++) {
-      const yOffset = (i * grid * summonNum)/monsterNum
+    for (let i = 1; i < monsterNum + 1; i++) {
+      const yOffset = (i * grid * summonNum) / monsterNum
       enemies.push(
         new Enemy({
           position: {
             x: waypoints[0].x,
             y: waypoints[0].y + yOffset
           }
-        })
+        }, 1 + (1 / 2 * (roundCount - 1))
+        )
       )
     }
   }
@@ -131,7 +134,7 @@ function animate() {
     }
   }
 
-  for (let i = enemies.length-1; 0<= i; i--){
+  for (let i = enemies.length - 1; 0 <= i; i--) {
     enemies[i].drawLifeBar()
   }
 
@@ -139,8 +142,7 @@ function animate() {
     tile.update(mouse)
   }))
 
-  summonButton.update(mouse, hand.getHandRank())
-
+  summonButton.update(mouse, hand.handRankResult)
 
   buildings.forEach((building => {
 
@@ -150,10 +152,16 @@ function animate() {
       const xDiff = enemy.center.x - building.center.x
       const yDiff = enemy.center.y - building.center.y
       const distance = Math.hypot(xDiff, yDiff)
-      return distance < enemy.radius + building.radius
+
+      return distance < enemy.radius + building.getRadius()
     })
 
     building.target = validEnemies[0]
+
+    if (building.rankTower && building.rankTower.rankName === HandRank.FULL_HOUSE){
+      console.log(building.target)
+      console.log(validEnemies)
+    }
 
     building.update()
 
@@ -169,7 +177,7 @@ function animate() {
 
       //when hit the enemy
       if (distance < (tile.radius + tile.enemy.radius)) {
-        tile.enemy.health -= tile.power
+        tile.enemy.health -= tile.getPower()
         if (tile.enemy.health <= 0) {
           const index = enemies.findIndex((enemy) => {
             return tile.enemy === enemy
@@ -185,6 +193,20 @@ function animate() {
       }
 
     }
+
+    //소환 버튼에 갔을때 나머지 비활성화
+    if (summonButton.isMouseInside(mouse) && hand.handRankResult) {
+      let isInHanRank = false
+      hand.handRankResult.usedCards.forEach((card) => {
+          if (building.card && card.equal(building.card)) {
+            isInHanRank = true
+          }
+        }
+      )
+      if (!isInHanRank) {
+        building.deActivate()
+      }
+    }
   }))
 
 }
@@ -194,9 +216,10 @@ const mouse = {
   y: undefined
 }
 
-let cardPrice = 10
+let cardPrice = 1
 
-canvas.addEventListener('click', (event) => {
+window.addEventListener('click', (event) => {
+  cardPrice = 2 ** buildings.length;
   if (activeTile && !activeTile.isOccupied && coins >= cardPrice && canEditCard) {
     // 카드뽑기
     canEditCard = false
@@ -219,9 +242,46 @@ canvas.addEventListener('click', (event) => {
     // console.log(Building)
   }
 
+  if (isMouseInSummonButton && hand.handRankResult && canEditCard) {
+    //기물 소환
+    canEditCard = false
 
+    for (let i = buildings.length - 1; 0 <= i; i--) {
+      // 빌딩 순회
+      let building = buildings[i];
+      let buildingCard = building.card;
+      if (buildingCard) {
+        hand.handRankResult.usedCards.forEach((card) => {
+            // 빌딩카드가 족보에 쓰일경우
+            if (buildingCard.equal(card)) {
+              // 가장 탑일경우 타워설치
+              if (buildingCard.equal(hand.handRankResult.topCards[0])) {
+                console.log(hand.handRankResult.name)
+                building.rankTower = new RankTower(hand.handRankResult.name, hand.handRankResult.topCards)
+                building.card = null
+              } else {
+                //아닐경우 제거
+                buildings.splice(i, 1)
+                placementTiles.forEach((tile) => {
+                  if (tile.position.x === building.position.x && tile.position.y === building.position.y) {
+                    tile.isOccupied = false
+                  }
+                })
+              }
+            }
+          }
+        )
+      }
+    }
 
-
+    const cardsToBeStash = [...hand.handRankResult.usedCards]
+    cardsToBeStash.forEach((card) => {
+        hand.removeCard(card)
+        deck.trash(card)
+      }
+    )
+    canEditCard = true
+  }
   // console.log(buildings)
 })
 
@@ -242,6 +302,8 @@ window.addEventListener('mousemove', (event) => {
         break
       }
     }
+
+    isMouseInSummonButton = summonButton.isMouseInside(mouse)
 
     // console.log(activeTile)
   }
