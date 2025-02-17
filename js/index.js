@@ -61,23 +61,31 @@ placementTilesData.forEach((row, y) => {
 })
 
 function drawGrid() {
-  c.strokeStyle = '#90EE90';
+  c.strokeStyle = '#2E8B57'; // 어두운 초록색
   c.lineWidth = 2;
 
-  for (let x = 0; x <= canvas.width; x += grid) {
+  const startX = Math.floor((canvas.width - 5 * grid) / 2);
+  const startY = Math.floor((canvas.height - 3 * grid) / 2);
+  const endX = startX + 5 * grid;
+  const endY = startY + 3 * grid;
+
+  // 세로선 (중앙 5칸)
+  for (let x = startX; x <= endX; x += grid) {
     c.beginPath();
-    c.moveTo(x, 0);
-    c.lineTo(x, canvas.height);
+    c.moveTo(x, startY);
+    c.lineTo(x, endY);
     c.stroke();
   }
 
-  for (let y = 0; y <= canvas.height; y += grid) {
+  // 가로선 (중앙 3칸)
+  for (let y = startY; y <= endY; y += grid) {
     c.beginPath();
-    c.moveTo(0, y);
-    c.lineTo(canvas.width, y);
+    c.moveTo(startX, y);
+    c.lineTo(endX, y);
     c.stroke();
   }
 }
+
 
 const enemies = []
 const buildings = []
