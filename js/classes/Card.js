@@ -1,14 +1,20 @@
+import {HandRank} from '../enums/handRank.js';
+
 export class Card {
   constructor(suit, rank) {
     this.suit = suit
     this.rank = rank
+  }
+
+  equal(card){
+    return this.suit === card.suit && this.rank == card.rank
   }
 }
 
 export class Deck {
   constructor() {
     this.cardList = []
-    for (let suit = 4; 0 < suit; suit--) {
+    for (let suit = 3; 0 <= suit; suit--) {
       for (let rank = 14; 2 <= rank; rank--) {
         this.cardList.push(new Card(suit, rank))
       }
@@ -33,7 +39,7 @@ export class Hand {
     this.sortedCards = [];
     this.suitMap = new Map(); // Map<number, Card[]>
     this.rankMap = new Map();
-    this.handRank = undefined;
+    this.handRankResult = undefined;
   }
 
   addCard(card) {
@@ -56,12 +62,12 @@ export class Hand {
     }
     this.rankMap.get(card.rank).push(card);
 
-    this.handRank = this.getHandRank()
+    this.handRankResult = this.getHandRankResult()
   }
 
   removeCard(card) {
     // 카드 제거
-    const index = this.cardList.findIndex(c => c.equals(card));
+    const index = this.cardList.findIndex(c => c.equal(card));
     if (index === -1) {
       return false;
     }
@@ -73,7 +79,7 @@ export class Hand {
 
     // suit map 업데이트
     const suitCards = this.suitMap.get(card.suit);
-    const suitIndex = suitCards.findIndex(c => c.equals(card));
+    const suitIndex = suitCards.findIndex(c => c.equal(card));
     suitCards.splice(suitIndex, 1);
     if (suitCards.length === 0) {
       this.suitMap.delete(card.suit);
@@ -81,24 +87,24 @@ export class Hand {
 
     // rank map 업데이트
     const rankCards = this.rankMap.get(card.rank);
-    const rankIndex = rankCards.findIndex(c => c.equals(card));
+    const rankIndex = rankCards.findIndex(c => c.equal(card));
     rankCards.splice(rankIndex, 1);
     if (rankCards.length === 0) {
       this.rankMap.delete(card.rank);
     }
 
-    this.handRank = this.getHandRank()
+    this.handRankResult = this.getHandRankResult()
 
     return true;
   }
 
-  getHandRank() {
+  getHandRankResult() {
     // 족보 체크 함수들
     const isRoyalStraightFlush = () => {
       const result = isStraightFlush();
       if (result && result.topCards[0].rank === 14) {
         return new HandRankResult(
-          'RoyalStraightFlush',
+          HandRank.ROYAL_STRAIGHT_FLUSH,
           result.usedCards,
           result.topCards
         );
@@ -117,7 +123,7 @@ export class Hand {
               straightCards.push(cards[i]);
               if (straightCards.length === 5) {
                 return new HandRankResult(
-                  'StraightFlush',
+                  HandRank.STRAIGHT_FLUSH,
                   straightCards,
                   [straightCards[0]]
                 );
@@ -126,7 +132,7 @@ export class Hand {
               if (cards[0].rank === 14 && straightCards[0].rank === 5 && straightCards.length === 4) {
                 straightCards.push(straightCards[0])
                 return new HandRankResult(
-                  'StraightFlush',
+                  HandRank.STRAIGHT_FLUSH,
                   straightCards,
                   [straightCards[0]]
                 )
@@ -142,11 +148,10 @@ export class Hand {
     };
 
     const isFourCard = () => {
-      // rank map을 활용한 최적화된 포카드 체크
       for (const [rank, cards] of this.rankMap.entries()) {
         if (cards.length === 4) {
           return new HandRankResult(
-            'FourCard',
+            HandRank.FOUR_CARD,
             cards,
             [cards[0]]
           );
@@ -156,7 +161,6 @@ export class Hand {
     };
 
     const isFullHouse = () => {
-      // rank map을 활용한 최적화된 풀하우스 체크
       let triple = null;
       let pair = null;
 
@@ -169,7 +173,7 @@ export class Hand {
 
         if (triple && pair) {
           return new HandRankResult(
-            'FullHouse',
+            HandRank.FULL_HOUSE,
             [...triple, ...pair],
             [triple[0], pair[0]]
           );
@@ -179,12 +183,11 @@ export class Hand {
     };
 
     const isFlush = () => {
-      // suit map을 활용한 최적화된 플러시 체크
       for (const [suit, cards] of this.suitMap.entries()) {
         if (cards.length >= 5) {
           const flushCards = cards.slice(0, 5);
           return new HandRankResult(
-            'Flush',
+            HandRank.FLUSH,
             flushCards,
             [flushCards[0]]
           );
@@ -194,7 +197,6 @@ export class Hand {
     };
 
     const isStraight = () => {
-      // sortedCards를 활용한 스트레이트 체크
 
       let straightCards = [this.sortedCards[0]];
       for (let i = 1; i < this.sortedCards.length; i++) {
@@ -202,7 +204,7 @@ export class Hand {
           straightCards.push(this.sortedCards[i]);
           if (straightCards.length === 5) {
             return new HandRankResult(
-              'Straight',
+              HandRank.STRAIGHT,
               straightCards,
               [straightCards[0]]
             );
@@ -212,7 +214,7 @@ export class Hand {
           if (this.sortedCards[0].rank === 14 && straightCards[0].rank === 5 && straightCards.length === 4) {
             straightCards.push(this.sortedCards[0])
             return new HandRankResult(
-              'Straight',
+              HandRank.STRAIGHT,
               straightCards,
               [straightCards[0]]
             )
@@ -226,11 +228,10 @@ export class Hand {
     };
 
     const isTriple = () => {
-      // rank map을 활용한 최적화된 트리플 체크
       for (const [rank, cards] of this.rankMap.entries()) {
         if (cards.length === 3) {
           return new HandRankResult(
-            'Triple',
+            HandRank.TRIPLE,
             cards,
             [cards[0]]
           );
@@ -240,14 +241,13 @@ export class Hand {
     };
 
     const isTwoPair = () => {
-      // rank map을 활용한 최적화된 투페어 체크
       const pairs = [];
       for (const [rank, cards] of this.rankMap.entries()) {
         if (cards.length >= 2) {
           pairs.push(cards.slice(0, 2));
           if (pairs.length === 2) {
             return new HandRankResult(
-              'TwoPair',
+              HandRank.TWO_PAIR,
               [...pairs[0], ...pairs[1]],
               [pairs[0][0], pairs[1][0]]
             );
@@ -258,12 +258,11 @@ export class Hand {
     };
 
     const isPair = () => {
-      // rank map을 활용한 최적화된 원페어 체크
       for (const [rank, cards] of this.rankMap.entries()) {
         if (cards.length >= 2) {
           const pairCards = cards.slice(0, 2);
           return new HandRankResult(
-            'OnePair',
+            HandRank.ONE_PAIR,
             pairCards,
             [pairCards[0]]
           );
@@ -272,7 +271,6 @@ export class Hand {
       return null;
     };
 
-    // 족보 우선순위대로 체크
     return isRoyalStraightFlush() ||
            isStraightFlush() ||
            isFourCard() ||
