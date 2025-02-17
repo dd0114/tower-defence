@@ -37,5 +37,5 @@ function getResult(cardNum) {
     hand.addCard(card)
   }
 
-  return hand.getHandRank();
+  return hand.getHandRankResult();
 }

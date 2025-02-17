@@ -1,23 +1,37 @@
 import {c} from '../data/canvas.js';
 
 export class ProjectTile {
-  constructor({position = {x: 0, y: 0}}, enemy) {
+  constructor({position = {x: 0, y: 0}}, enemy, projectTileInfo) {
     this.position = position
-    this.speed = 10
+    this.speed = 5
     this.radius = 10
     this.enemy = enemy
-    this.power = 10
+    this.power = 5
     this.velocity = {
       x: 0,
       y: 0
     }
+    this.projectTileInfo = projectTileInfo
+  }
+
+  getPower(){
+    return this.power*(this.projectTileInfo?.power??1)
   }
 
   draw() {
-    c.beginPath()
-    c.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2)
-    c.fillStyle = 'orange'
-    c.fill()
+    if (this.projectTileInfo) {
+      c.beginPath()
+      c.arc(this.position.x, this.position.y, this.radius * this.projectTileInfo.radius, 0, Math.PI * 2)
+      c.fillStyle = this.projectTileInfo.color
+      c.fill()
+
+    } else {
+
+      c.beginPath()
+      c.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2)
+      c.fillStyle = 'orange'
+      c.fill()
+    }
   }
 
   update() {
@@ -28,7 +42,7 @@ export class ProjectTile {
       this.enemy.center.x - this.position.x
     )
 
-    this.position.x += Math.cos(angle) * this.speed
-    this.position.y += Math.sin(angle) * this.speed
+    this.position.x += Math.cos(angle) * this.speed * (this.projectTileInfo?.speed ?? 1)
+    this.position.y += Math.sin(angle) * this.speed * (this.projectTileInfo?.speed ?? 1)
   }
 }

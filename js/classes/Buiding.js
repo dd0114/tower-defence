@@ -1,8 +1,10 @@
 import {ProjectTile} from './ProjectTile.js';
 import {config} from "../data/config.js";
 import {c} from '../data/canvas.js';
+import {handRankInfoMap} from '../data/handRankMap.js';
 import {Card} from "./Card.js";
 import {Sprite} from './Sprite.js';
+import {HandRank} from '../enums/handRank.js';
 
 const grid = config.grid
 
@@ -16,62 +18,147 @@ export class Building {
       x: this.position.x + grid / 2,
       y: this.position.y + grid / 2
     }
-    this.radius = 300
+    this.range = 200
     this.target = undefined
     this.projectTiles = []
     this.elapsedSpawnTime = 0
-    this.attackSpeed = 30
+    this.attackSpeed = 100
     this.card = card
+    this.rankTower = null
 
     console.log(card)
   }
 
-draw() {
-    // 🔹 카드 배경 (흰색)
-    c.fillStyle = "white";
-    c.fillRect(
-      this.position.x + (grid - this.width) / 2,
-      this.position.y + (grid - this.height) / 2,
-      this.width,
-      this.height
-    );
+  getRadius() {
 
+    return this.range * (handRankInfoMap[this.rankTower?.rankName]?.projectTile?.range ?? 1);
+  }
+
+  draw() {
     // 🔹 Suit (문양) 및 Rank (숫자/문자 변환)
-    const suits = ["", "♠", "♥", "♦", "♣"];
-    const colors = ["", "black", "red", "red", "black"]; // ♠♣ 검정, ♥♦ 빨강
-    const ranks = { 11: "J", 12: "Q", 13: "K", 14: "A" };
+    const suits = ["♠", "♥", "♦", "♣"];
+    const colors = ["black", "red", "red", "black"]; // ♠♣ 검정, ♥♦ 빨강
+    const ranks = {11: "J", 12: "Q", 13: "K", 14: "A"};
 
-    const suit = suits[this.card.suit]; // 숫자 → 문양 변환
-    const rank = ranks[this.card.rank] || this.card.rank; // 숫자 → JQKA 변환
-    const textColor = colors[this.card.suit]; // 검정/빨강 색상 선택
+    // console.log(handRankInfoMap)
+    // console.log(handRankInfoMap["OnePair"])
 
-    // 🔹 폰트 스타일 변경 (Google Fonts 적용)
-    c.fillStyle = textColor;
-    c.font = `bold ${grid * 0.35}px "Changa One", "Noto Sans", sans-serif`; // ✅ Google Fonts 적용
-    c.textAlign = "center";
-    c.textBaseline = "middle";
+    // if (false){
+    if (this.rankTower) {
 
-    // 🔹 숫자 (상단)
-    c.fillText(rank, this.center.x, this.position.y + grid * 0.3);
+      const colors = ["black", "rgba(139, 0, 0, 1)", "rgba(139, 0, 0, 1)", "black"]; // ♠♣ 검정, ♥♦ 빨강
+      let handRankInfo = handRankInfoMap[this.rankTower.rankName];
 
-    // 🔹 문양 (중앙)
-    c.font = `bold ${grid * 0.35}px "Changa One", "Noto Sans", sans-serif`; // ✅ 문양도 적용
-    c.fillText(suit, this.center.x, this.center.y+ grid * 0.15);
+      let topCard = this.rankTower.topCards[0];
+      const suit = suits[topCard.suit]; // 숫자 → 문양 변환
+      const rank = ranks[topCard.rank] || topCard.rank; // 숫자 → JQKA 변환
+      const textColor = colors[topCard.suit]; // 검정/빨강 색상 선택
+
+      const borderThickness = handRankInfo.view.lineThick; // 테두리 두께
+      const halfBorder = borderThickness / 2; // 테두리 절반
+
+      const x = this.position.x + (grid - this.width) / 2;
+      const y = this.position.y + (grid - this.height) / 2;
+      const w = this.width - borderThickness;
+      const h = this.height - borderThickness;
+
+      // 🔹 카드 배경 (흰색)
+      c.fillStyle = "rgb(0,0,0, 0.5)";
+      c.fillRect(x, y, this.width, this.height);
+
+      // 🔹 카드 테두리 (내부로 조정)
+      c.lineWidth = borderThickness;
+      c.strokeStyle = handRankInfo.view.lineColor;
+      c.strokeRect(x + halfBorder, y + halfBorder, w, h);
+
+      // 🔹 폰트 스타일 변경 (Google Fonts 적용)
+      c.fillStyle = textColor;
+      c.font = `bold ${grid * 0.25}px "Changa One", "Noto Sans", sans-serif`;
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+
+      // 🔹 숫자 (상단)
+      c.fillText(rank, this.center.x - grid * 0.1, this.position.y + grid * 0.75);
+
+      // 🔹 문양 (중앙)
+      c.font = `bold ${grid * 0.3}px "Changa One", "Noto Sans", sans-serif`;
+      c.fillText(suit, this.center.x + grid * 0.1, this.position.y + grid * 0.75);
+
+      // 🔹 아이콘
+      c.fillStyle = "black";
+      c.font = `bold ${grid * 0.5}px Arial`;
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillText(handRankInfo.view.icon, this.center.x, this.center.y - grid * 0.1);
+    }
+
+    if (this.card) {
+
+      const suit = suits[this.card.suit]; // 숫자 → 문양 변환
+      const rank = ranks[this.card.rank] || this.card.rank; // 숫자 → JQKA 변환
+      const textColor = colors[this.card.suit]; // 검정/빨강 색상 선택
+
+      // 🔹 카드 배경 (흰색)
+      c.fillStyle = "white";
+      c.fillRect(
+        this.position.x + (grid - this.width) / 2,
+        this.position.y + (grid - this.height) / 2,
+        this.width,
+        this.height
+      );
+
+      // 🔹 폰트 스타일 변경 (Google Fonts 적용)
+      c.fillStyle = textColor;
+      c.font = `bold ${grid * 0.35}px "Changa One", "Noto Sans", sans-serif`;
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+
+      // 🔹 숫자 (상단)
+      c.fillText(rank, this.center.x, this.position.y + grid * 0.3);
+
+      // 🔹 문양 (중앙)
+      c.font = `bold ${grid * 0.35}px "Changa One", "Noto Sans", sans-serif`;
+      c.fillText(suit, this.center.x, this.center.y + grid * 0.15);
+    }
+
   }
 
   update() {
     this.draw()
 
-    if (this.elapsedSpawnTime % this.attackSpeed === 0 && this.target) {
+    //shoot
+    let spawnMultiplier = 1
+    let projectTileInfo = null
+    if (this.rankTower) {
+      const handRankInfo = handRankInfoMap[this.rankTower.rankName];
+      spawnMultiplier = handRankInfo.projectTile.spawnTime
+      projectTileInfo = handRankInfo.projectTile
+
+
+
+    }
+
+    if (this.elapsedSpawnTime % Math.floor(this.attackSpeed / spawnMultiplier) === 0 && this.target) {
       this.projectTiles.push(
         new ProjectTile({
-          position: {
-            x: this.center.x,
-            y: this.center.y
-          }
-        }, this.target)
+            position: {
+              x: this.center.x,
+              y: this.center.y
+            }
+          }, this.target
+          , projectTileInfo)
       )
     }
     this.elapsedSpawnTime++
+  }
+
+  deActivate() {
+    c.fillStyle = "rgba(0, 0, 0, 0.7)";
+    c.fillRect(
+      this.position.x,
+      this.position.y,
+      grid,
+      grid
+    );
   }
 }
