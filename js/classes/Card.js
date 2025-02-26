@@ -6,7 +6,7 @@ export class Card {
     this.rank = rank
   }
 
-  equal(card){
+  equal(card) {
     return this.suit === card.suit && this.rank == card.rank
   }
 }
@@ -25,11 +25,13 @@ export class Deck {
     let randomIndex = Math.floor(Math.random() * 1000000) % this.cardList.length;
     const card = this.cardList[randomIndex]
     this.cardList.splice(randomIndex, 1)
+    console.log("deck" + this.cardList.length)
     return card
   }
 
   trash(card) {
     this.cardList.push(card)
+    console.log("deck" + this.cardList.length)
   }
 }
 
@@ -40,6 +42,10 @@ export class Hand {
     this.suitMap = new Map(); // Map<number, Card[]>
     this.rankMap = new Map();
     this.handRankResult = undefined;
+  }
+
+  isEmpty(){
+    return this.cardList.length === 0
   }
 
   addCard(card) {
@@ -63,6 +69,7 @@ export class Hand {
     this.rankMap.get(card.rank).push(card);
 
     this.handRankResult = this.getHandRankResult()
+    console.log("handDraw" + this.cardList.length)
   }
 
   removeCard(card) {
@@ -94,7 +101,7 @@ export class Hand {
     }
 
     this.handRankResult = this.getHandRankResult()
-
+    console.log("hand" + this.cardList.length)
     return true;
   }
 
@@ -279,9 +286,8 @@ export class Hand {
            isStraight() ||
            isTriple() ||
            isTwoPair() ||
-           isPair()
-           // ||
-           // new HandRankResult('HighCard', [this.sortedCards[0]], [this.sortedCards[0]]);
+           isPair() ||
+           new HandRankResult('HighCard', [this.sortedCards[0]], [this.sortedCards[0]]);
   }
 }
 

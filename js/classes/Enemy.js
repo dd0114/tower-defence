@@ -12,7 +12,7 @@ export class Enemy {
     this.radius = 40
     this.maxHealth = 20 * multiplier
     this.health = this.maxHealth
-    this.reward = 25 * multiplier
+    this.reward = Math.round(10 * multiplier)
     this.center = {
       x: this.position.x + this.width / 2,
       y: this.position.y + this.height / 2
