@@ -25,8 +25,7 @@ export class Building {
     this.attackSpeed = 100
     this.card = card
     this.rankTower = null
-
-    console.log(card)
+    this.isPicked = null
   }
 
   getRadius() {
@@ -34,16 +33,17 @@ export class Building {
     return this.range * (handRankInfoMap[this.rankTower?.rankName]?.projectTile?.range ?? 1);
   }
 
-  draw() {
+  draw(mouseX, mouseY) {
     // 🔹 Suit (문양) 및 Rank (숫자/문자 변환)
     const suits = ["♠", "♥", "♦", "♣"];
     const colors = ["black", "red", "red", "black"]; // ♠♣ 검정, ♥♦ 빨강
     const ranks = {11: "J", 12: "Q", 13: "K", 14: "A"};
 
-    // console.log(handRankInfoMap)
-    // console.log(handRankInfoMap["OnePair"])
+    const centerX = mouseX ?? this.center.x
+    const centerY = mouseY ?? this.center.y
+    const positionX = centerX - grid / 2
+    const positionY = centerY - grid / 2
 
-    // if (false){
     if (this.rankTower) {
 
       const colors = ["black", "rgba(139, 0, 0, 1)", "rgba(139, 0, 0, 1)", "black"]; // ♠♣ 검정, ♥♦ 빨강
@@ -57,8 +57,8 @@ export class Building {
       const borderThickness = handRankInfo.view.lineThick; // 테두리 두께
       const halfBorder = borderThickness / 2; // 테두리 절반
 
-      const x = this.position.x + (grid - this.width) / 2;
-      const y = this.position.y + (grid - this.height) / 2;
+      const x = positionX + (grid - this.width) / 2;
+      const y = positionY + (grid - this.height) / 2;
       const w = this.width - borderThickness;
       const h = this.height - borderThickness;
 
@@ -78,18 +78,18 @@ export class Building {
       c.textBaseline = "middle";
 
       // 🔹 숫자 (상단)
-      c.fillText(rank, this.center.x - grid * 0.1, this.position.y + grid * 0.75);
+      c.fillText(rank, centerX - grid * 0.1, positionY + grid * 0.75);
 
       // 🔹 문양 (중앙)
       c.font = `bold ${grid * 0.3}px "Changa One", "Noto Sans", sans-serif`;
-      c.fillText(suit, this.center.x + grid * 0.1, this.position.y + grid * 0.75);
+      c.fillText(suit, centerX + grid * 0.1, positionY + grid * 0.75);
 
       // 🔹 아이콘
       c.fillStyle = "black";
       c.font = `bold ${grid * 0.5}px Arial`;
       c.textAlign = "center";
       c.textBaseline = "middle";
-      c.fillText(handRankInfo.view.icon, this.center.x, this.center.y - grid * 0.1);
+      c.fillText(handRankInfo.view.icon, centerX, centerY - grid * 0.1);
     }
 
     if (this.card) {
@@ -101,8 +101,8 @@ export class Building {
       // 🔹 카드 배경 (흰색)
       c.fillStyle = "white";
       c.fillRect(
-        this.position.x + (grid - this.width) / 2,
-        this.position.y + (grid - this.height) / 2,
+        positionX + (grid - this.width) / 2,
+        positionY + (grid - this.height) / 2,
         this.width,
         this.height
       );
@@ -114,12 +114,37 @@ export class Building {
       c.textBaseline = "middle";
 
       // 🔹 숫자 (상단)
-      c.fillText(rank, this.center.x, this.position.y + grid * 0.3);
+      c.fillText(rank, centerX, positionY + grid * 0.3);
 
       // 🔹 문양 (중앙)
       c.font = `bold ${grid * 0.35}px "Changa One", "Noto Sans", sans-serif`;
-      c.fillText(suit, this.center.x, this.center.y + grid * 0.15);
+      c.fillText(suit, centerX, centerY + grid * 0.15);
     }
+
+  }
+
+  getSellingMultiplier(){
+    if (this.rankTower){
+
+      let handRankInfo = handRankInfoMap[this.rankTower.rankName];
+      return handRankInfo.sellingMultiplier
+    }
+
+    return 0;
+  }
+
+  drawDragging(mouseX, mouseY) {
+    this.draw(mouseX, mouseY)
+
+    let positionX = mouseX - grid / 2
+    let positionY = mouseY - grid / 2
+    c.fillStyle = "rgb(255, 255, 255, 0.7)";
+    c.fillRect(
+      mouseX - this.width / 2,
+      mouseY - this.height / 2,
+      this.width,
+      this.height
+    );
 
   }
 
@@ -133,8 +158,6 @@ export class Building {
       const handRankInfo = handRankInfoMap[this.rankTower.rankName];
       spawnMultiplier = handRankInfo.projectTile.spawnTime
       projectTileInfo = handRankInfo.projectTile
-
-
 
     }
 

@@ -34,10 +34,6 @@ export class SummonButton {
     c.stroke();
     c.setLineDash([]); // 기본값으로 리셋
 
-    // 🔹 중앙 몬스터 이모지 추가 (👹, 👻, 🧟, 💀 중 랜덤)
-    // const monsterIcons = ["👹", "👻", "🧟", "💀"];
-    // const monster = monsterIcons[Math.floor(Math.random() * monsterIcons.length)];
-
     // 🔹 이모지 감싸는 얇은 원 추가
     c.strokeStyle = "black";
     c.lineWidth = 2;
@@ -73,9 +69,9 @@ export class SummonButton {
     return Math.sqrt(dx * dx + dy * dy) <= this.radius;
   }
 
-  update(mouse, handResult) {
+  update(isMouseInSummonButton, handResult) {
     this.drawDefault();
-    if (this.isMouseInside(mouse)) {
+    if (isMouseInSummonButton) {
       this.drawActive(handResult);
     } else {
       this.drawMonster()
