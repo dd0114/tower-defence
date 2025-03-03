@@ -22,7 +22,7 @@ export class RaiseButton {
       this.drawDefault();
       this.drawDefault('blue')
       this.fillText("Raise", 0)
-      this.showCost(price * 2)
+      this.showCost(price)
     }
   }
 
@@ -83,14 +83,11 @@ export class RaiseButton {
     // 테두리 색상 설정
     c.lineWidth = size * 0.1; // 테두리 두께
     c.strokeStyle = "black";  // 테두리 색상
-    c.strokeText(cost, this.center.x + size / 2, this.center.y + size / 2 * 2);
+    c.strokeText(cost, this.center.x, this.center.y + size * 1.3);
 
     // 글씨 색상 설정
     c.fillStyle = "gold";
-    c.fillText(cost, this.center.x + size / 2, this.center.y + size / 2 * 2);
-
-    c.fillStyle = "white";
-    c.fillText("💰", this.center.x - size / 2, this.center.y + size / 2 * 2);
+    c.fillText(cost, this.center.x, this.center.y + size * 1.3);
   }
 
   drawActiveEffect() {
