@@ -70,13 +70,13 @@ export class CenterButton {
     return Math.sqrt(dx * dx + dy * dy) <= this.radius;
   }
 
-  fillText(text, offset) {
+  fillText(text) {
     // 🔹 몬스터 이모지 출력
     c.fillStyle = "black";
     c.font = `bold ${this.radius * 0.3}px Arial`;
     c.textAlign = "center";
     c.textBaseline = "middle";
-    c.fillText(text, this.center.x, this.center.y - offset);
+    c.fillText(text, this.center.x, this.center.y);
   }
 
   showCost(cost) {
@@ -89,14 +89,11 @@ export class CenterButton {
     // 테두리 색상 설정
     c.lineWidth = size * 0.1; // 테두리 두께
     c.strokeStyle = "black";  // 테두리 색상
-    c.strokeText(cost, this.center.x + size / 2, this.center.y + size / 2 * 2);
+    c.strokeText(cost, this.center.x, this.center.y + size * 1.3);
 
     // 글씨 색상 설정
     c.fillStyle = "gold";
-    c.fillText(cost, this.center.x + size / 2, this.center.y + size / 2 * 2);
-
-    c.fillStyle = "white";
-    c.fillText("💰", this.center.x - size / 2, this.center.y + size / 2 * 2);
+    c.fillText(cost, this.center.x, this.center.y + size * 1.3);
   }
 
   drawActiveEffect() {

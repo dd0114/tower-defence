@@ -18,7 +18,7 @@ export class Building {
       x: this.position.x + grid / 2,
       y: this.position.y + grid / 2
     }
-    this.range = 200
+    this.range = config.grid * 3
     this.target = undefined
     this.projectTiles = []
     this.elapsedSpawnTime = 0
@@ -123,8 +123,8 @@ export class Building {
 
   }
 
-  getSellingMultiplier(){
-    if (this.rankTower){
+  getSellingMultiplier() {
+    if (this.rankTower) {
 
       let handRankInfo = handRankInfoMap[this.rankTower.rankName];
       return handRankInfo.sellingMultiplier
@@ -148,8 +148,11 @@ export class Building {
 
   }
 
-  update() {
+  update(mouse) {
     this.draw()
+    if (this.isMouseIn(mouse)) {
+      this.drawActiveEffect()
+    }
 
     //shoot
     let spawnMultiplier = 1
@@ -183,5 +186,15 @@ export class Building {
       grid,
       grid
     );
+  }
+
+  isMouseIn(mouse) {
+    return this.position.x < mouse.x && mouse.x < this.position.x + this.width
+           && this.position.y < mouse.y && mouse.y < this.position.y + this.height
+  }
+
+  drawActiveEffect() {
+    c.fillStyle = 'rgb(255,255,255,0.3)'
+    c.fillRect(this.position.x, this.position.y, grid, grid)
   }
 }
