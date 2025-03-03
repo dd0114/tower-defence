@@ -14,6 +14,8 @@ import {PlayerBoard} from './classes/PlayerBoard.js';
 import {Coins} from './classes/Coins.js';
 import {Hearts} from './classes/Hearts.js';
 import {Stage} from './classes/Stage.js';
+import {CoinPlus} from './classes/Effect/CoinPlus.js';
+import {CoinMinus} from './classes/Effect/CoinMinus.js';
 
 const grid = config.grid
 
@@ -73,6 +75,7 @@ function drawGrid() {
 
 const enemies = []
 const buildings = []
+const effects = []
 let activeTile = undefined
 let isMouseInSummonButton = false
 
@@ -104,17 +107,20 @@ function animate() {
 
   if (enemies.length === 0) {
     stage.round += 1
-    const monsterNum = summonNum * (1 + (stage.round - 1) / 2)
+    const multiplier = 1 + ((1 / 5) * (stage.round - 1))
+    const monsterNum = (summonNum * multiplier)
 
+    const icon = Enemy.selectIcon();
     for (let i = 1; i < monsterNum + 1; i++) {
       const yOffset = (i * grid * summonNum) / monsterNum
       enemies.push(
         new Enemy({
-          position: {
-            x: waypoints[0].x,
-            y: waypoints[0].y + yOffset
-          }
-        }, 1 + (1 / 3 * (stage.round - 1))
+            position: {
+              x: waypoints[0].x,
+              y: waypoints[0].y + yOffset
+            }
+          }, multiplier,
+          icon
         )
       )
     }
@@ -123,6 +129,7 @@ function animate() {
   for (let i = enemies.length - 1; 0 <= i; i--) {
     const enemy = enemies[i];
     enemy.update()
+
     if (enemy.waypointIndex === waypoints.length - 1 && enemy.position.y > canvas.height) {
       hearts.life -= 1
       enemies.splice(i, 1)
@@ -139,26 +146,27 @@ function animate() {
     enemies[i].drawLifeBar()
   }
 
-  placementTiles.forEach((tile => {
-    tile.update(mouse)
-  }))
+  // placementTiles.forEach((tile => {
+  //   tile.update(mouse)
+  // }))
 
   buildings.forEach((building => {
 
-    building.target = null
+    building.target = null;
 
-    const validEnemies = enemies.filter((enemy) => {
-      const xDiff = enemy.center.x - building.center.x
-      const yDiff = enemy.center.y - building.center.y
-      const distance = Math.hypot(xDiff, yDiff)
+    const validEnemies = enemies.map((enemy) => {
+      const xDiff = enemy.center.x - building.center.x;
+      const yDiff = enemy.center.y - building.center.y;
+      const distance = Math.hypot(xDiff, yDiff);
 
-      return distance < enemy.radius + building.getRadius()
-    })
+      return {enemy, distance};
+    }).filter(({enemy, distance}) => distance < enemy.radius + building.getRadius() && enemy.isInBoard()).sort((a, b) => a.distance - b.distance)
 
-    building.target = validEnemies[0]
+    const n = 1; // 추출할 개수 설정
+    building.target = validEnemies.slice(0, n).map((item) => item.enemy)[0];
 
     if (!building.isPicked) {
-      building.update()
+      building.update(mouse)
     }
 
     for (let i = building.projectTiles.length - 1; 0 <= i; i--) {
@@ -166,58 +174,54 @@ function animate() {
       const tile = building.projectTiles[i]
       tile.update()
 
-      const xDifference = tile.position.x - tile.enemy.center.x
-      const yDifference = tile.position.y - tile.enemy.center.y
-      const distance = Math.hypot(xDifference, yDifference);
-      // console.log(distance < (tile.radius + tile.enemy.radius))
-
       //when hit the enemy
-      if (distance < (tile.radius + tile.enemy.radius)) {
-        tile.enemy.health -= tile.getPower()
-        if (tile.enemy.health <= 0) {
+      if (tile.isHitTheEnemy()) {
+        tile.applyDamage()
+
+        //적 죽을 때 제거
+        const tileEnemy = tile.enemy;
+        if (tileEnemy.health <= 0 && tileEnemy.isDeath === false) {
+          tileEnemy.isDeath = true
           const index = enemies.findIndex((enemy) => {
-            return tile.enemy === enemy
+            return tileEnemy === enemy
           });
 
           if (index > -1) {
-            coins.balance += tile.enemy.reward
+            let income = tileEnemy.reward;
+            coins.balance += income
             enemies.splice(index, 1)
+            effects.push(new CoinPlus(tileEnemy.center, income))
           }
         }
         building.projectTiles.splice(i, 1)
       }
-
     }
+
+    //돈 획득
+    for (let i = effects.length - 1; 0 <= i; i--) {
+      let effect = effects[i];
+      effect.update()
+      if (effect.isEnd()) {
+        effects.splice(i, 1)
+      }
+    }
+
     //드래그된 빌딩 그리기
     if (pickedBuilding) {
       pickedBuilding.drawDragging(mouse.x, mouse.y)
 
-      //판매 가격 표시
-      c.fillStyle = 'black';
-      c.font = `bold ${grid * 0.25}px "Changa One", "Noto Sans", sans-serif`;
-      c.textAlign = "center";
-      c.textBaseline = "middle";
-
-      c.fillText('💰', mouse.x - grid * 0.1, mouse.y);
-
-      const sellingPrice = pickedBuilding.getSellingMultiplier() * getReRollCost()
-      c.fillText(sellingPrice.toString(), mouse.x + grid * 0.3, mouse.y);
+      // //판매 가격 표시
+      // c.fillStyle = 'black';
+      // c.font = `bold ${grid * 0.25}px "Changa One", "Noto Sans", sans-serif`;
+      // c.textAlign = "center";
+      // c.textBaseline = "middle";
+      //
+      // c.fillText('💰', mouse.x - grid * 0.1, mouse.y);
+      //
+      // const sellingPrice = pickedBuilding.getSellingMultiplier() * getReRollCost()
+      // c.fillText(sellingPrice.toString(), mouse.x + grid * 0.3, mouse.y);
 
     }
-
-    //소환 버튼에 갔을때 나머지 비활성화
-    // if (!pickedBuilding && isMouseInSummonButton && hand.handRankResult) {
-    //   let isInHanRank = false
-    //   hand.handRankResult.usedCards.forEach((card) => {
-    //       if (building.card && card.equal(building.card)) {
-    //         isInHanRank = true
-    //       }
-    //     }
-    //   )
-    //   if (!isInHanRank) {
-    //     building.deActivate()
-    //   }
-    // }
   }))
 
 }
@@ -241,16 +245,22 @@ window.addEventListener('click', (event) => {
 
   const cardCost = getReRollCost()
   if (buildings.length < 11 && hand.isEmpty() && isMouseInSummonButton && !pickedBuilding && coins.balance >= cardCost && canEditCard) {
-    // 카드뽑기
+    // reRoll
     reRoll()
+
+    const {x, y} = playerBoard.centerButton.center;
+    effects.push(new CoinMinus({x, y}, cardCost))
     return;
   }
 
-  if (buildings.length < 15 && !pickedBuilding && !hand.isEmpty() && playerBoard.raiseButtion.isMouseInside(mouse) && coins.balance >= getRaiseCost() && canEditCard) {
-    // 카드뽑기
-    coins.balance -= getRaiseCost()
+  const raiseCost = getRaiseCost()
+
+  if (buildings.length < 15 && !pickedBuilding && !hand.isEmpty() && playerBoard.raiseButtion.isMouseInside(mouse) && coins.balance >= raiseCost && canEditCard) {
+    // raise
+    coins.balance -= raiseCost
     drawRandomCard()
-    console.log(getRaiseCost())
+    const {x, y} = playerBoard.raiseButtion.center;
+    effects.push(new CoinMinus({x, y}, raiseCost))
     return;
   }
 
@@ -298,7 +308,6 @@ window.addEventListener('click', (event) => {
       canEditCard = true
     }
   }
-  // console.log(buildings)
 
   isDragging = false;
   mouseDownPos.x = null
@@ -346,12 +355,9 @@ window.addEventListener('mousedown', (event) => {
       for (let i = buildings.length - 1; 0 <= i; i--) {
         if (pickedBuilding === null) {
           let building = buildings[i];
-          if (building.position.x < mouse.x && mouse.x < building.position.x + grid
-              && building.position.y < mouse.y && mouse.y < building.position.y + grid) {
+          if (building.isMouseIn(mouse)) {
             pickedBuilding = building
             building.isPicked = true
-
-            console.log(pickedBuilding)
           }
         }
       }
@@ -401,7 +407,6 @@ function getRaiseCost() {
     return getReRollCost()
   }
 
-  console.log("@@@@@@here??"+cardPrice * (2 ** (numOfCard - 5)))
   return cardPrice * (2 ** (numOfCard - 5))
 }
 

@@ -14,8 +14,8 @@ export class ProjectTile {
     this.projectTileInfo = projectTileInfo
   }
 
-  getPower(){
-    return this.power*(this.projectTileInfo?.power??1)
+  getPower() {
+    return this.power * (this.projectTileInfo?.power ?? 0.2)
   }
 
   draw() {
@@ -44,5 +44,17 @@ export class ProjectTile {
 
     this.position.x += Math.cos(angle) * this.speed * (this.projectTileInfo?.speed ?? 1)
     this.position.y += Math.sin(angle) * this.speed * (this.projectTileInfo?.speed ?? 1)
+  }
+
+  isHitTheEnemy() {
+    const xDifference = this.position.x - this.enemy.center.x
+    const yDifference = this.position.y - this.enemy.center.y
+    const distance = Math.hypot(xDifference, yDifference);
+
+    return distance < (this.radius + this.enemy.radius)
+  }
+
+  applyDamage(){
+    this.enemy.health -= this.getPower()
   }
 }
