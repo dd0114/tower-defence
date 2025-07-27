@@ -96,7 +96,7 @@ export class Enemy {
 
   }
 
-  update() {
+  update(deltaTime = 16.67) {
     // this.draw()
     this.drawIcon()
 
@@ -105,16 +105,19 @@ export class Enemy {
     const xDistance = waypoint.x - this.center.x
     let angle = Math.atan2(yDistance, xDistance)
 
-    this.position.x += Math.cos(angle) * this.speed
-    this.position.y += Math.sin(angle) * this.speed
+    // deltaTime 기반 속도 계산 (60fps 기준으로 정규화)
+    const normalizedSpeed = this.speed * (deltaTime / 16.67)
+    
+    this.position.x += Math.cos(angle) * normalizedSpeed
+    this.position.y += Math.sin(angle) * normalizedSpeed
     this.center = {
       x: this.position.x + this.width / 2,
       y: this.position.y + this.height / 2
     }
 
     if (
-      Math.abs(Math.round((yDistance))) < this.speed &&
-      Math.abs(Math.round((xDistance))) < this.speed &&
+      Math.abs(Math.round((yDistance))) < normalizedSpeed &&
+      Math.abs(Math.round((xDistance))) < normalizedSpeed &&
       this.waypointIndex < waypoints.length - 1
     ) {
       this.waypointIndex++

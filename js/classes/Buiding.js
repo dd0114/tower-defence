@@ -148,7 +148,7 @@ export class Building {
 
   }
 
-  update(mouse) {
+  update(mouse, deltaTime = 16.67) {
     this.draw()
     if (this.isMouseIn(mouse)) {
       this.drawActiveEffect()
@@ -164,7 +164,10 @@ export class Building {
 
     }
 
-    if (this.elapsedSpawnTime % Math.floor(this.attackSpeed / spawnMultiplier) === 0 && this.target) {
+    // deltaTime 기반 타이머 (60fps 기준으로 정규화)
+    this.elapsedSpawnTime += deltaTime / 16.67
+    
+    if (this.elapsedSpawnTime >= Math.floor(this.attackSpeed / spawnMultiplier) && this.target) {
       this.projectTiles.push(
         new ProjectTile({
             position: {
@@ -174,8 +177,8 @@ export class Building {
           }, this.target
           , projectTileInfo)
       )
+      this.elapsedSpawnTime = 0
     }
-    this.elapsedSpawnTime++
   }
 
   deActivate() {

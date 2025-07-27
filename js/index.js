@@ -94,7 +94,12 @@ let mouseDownPos = {x: null, y: null};
 let mouseUpPos = {x: null, y: null};
 const DRAG_THRESHOLD = 3
 
-function animate() {
+let lastTime = 0;
+
+function animate(currentTime = 0) {
+  const deltaTime = (currentTime - lastTime) * config.gameSpeed;
+  lastTime = currentTime;
+  
   const animationId = requestAnimationFrame(animate);
 
   c.drawImage(backGround, 0, 0, canvas.width, canvas.height)
@@ -128,7 +133,7 @@ function animate() {
 
   for (let i = enemies.length - 1; 0 <= i; i--) {
     const enemy = enemies[i];
-    enemy.update()
+    enemy.update(deltaTime)
 
     if (enemy.waypointIndex === waypoints.length - 1 && enemy.position.y > canvas.height) {
       hearts.life -= 1
@@ -166,13 +171,13 @@ function animate() {
     building.target = validEnemies.slice(0, n).map((item) => item.enemy)[0];
 
     if (!building.isPicked) {
-      building.update(mouse)
+      building.update(mouse, deltaTime)
     }
 
     for (let i = building.projectTiles.length - 1; 0 <= i; i--) {
 
       const tile = building.projectTiles[i]
-      tile.update()
+      tile.update(deltaTime)
 
       //when hit the enemy
       if (tile.isHitTheEnemy()) {
@@ -200,7 +205,7 @@ function animate() {
     //돈 획득
     for (let i = effects.length - 1; 0 <= i; i--) {
       let effect = effects[i];
-      effect.update()
+      effect.update(deltaTime)
       if (effect.isEnd()) {
         effects.splice(i, 1)
       }
@@ -380,6 +385,14 @@ window.addEventListener('mouseup', (event) => {
     }
   }
 )
+
+// 게임 속도 조정 함수
+function setGameSpeed(speed) {
+  config.gameSpeed = speed;
+}
+
+// 전역으로 노출 (콘솔에서 테스트 가능)
+window.setGameSpeed = setGameSpeed;
 
 animate()
 

@@ -16,14 +16,15 @@ export class CoinMinus {
     console.log(position)
   }
 
-  update() {
+  update(deltaTime = 16.67) {
     this.updateAlpha();
 
     this.draw();
-    this.frame++;
+    // deltaTime 기반 프레임 증가 (60fps 기준으로 정규화)
+    this.frame += deltaTime / 16.67;
 
     // 점진적으로 상승
-    this.position.y += this.distance / this.maxFrame;
+    this.position.y += (this.distance / this.maxFrame) * (deltaTime / 16.67);
   }
 
   updateAlpha() {
