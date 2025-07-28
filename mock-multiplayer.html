@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tower Defense - Mock Multiplayer Test</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Changa+One:ital@0;1&family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <style>
+        body {
+            background-color: black;
+            font-family: 'Changa One', cursive;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .test-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: white;
+            text-align: center;
+        }
+        
+        .test-panel button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        .test-panel button:hover {
+            background: #45a049;
+        }
+        
+        .test-panel button.player2 {
+            background: #2196F3;
+        }
+        
+        .test-panel button.player2:hover {
+            background: #1976D2;
+        }
+        
+        .game-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 72px;
+            color: white;
+            -webkit-text-stroke: 3px black;
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            color: white;
+            font-size: 14px;
+        }
+    </style>
+
+    <div class="test-panel">
+        <h2>Tower Defense - Local Multiplayer Test</h2>
+        <p>이 페이지는 멀티플레이어 로직을 로컬에서 테스트하기 위한 모의 환경입니다.</p>
+        
+        <div>
+            <button id="simulatePlayer1" onclick="simulatePlayer('player1')">Player 1 연결 시뮬레이션</button>
+            <button id="simulatePlayer2" class="player2" onclick="simulatePlayer('player2')">Player 2 연결 시뮬레이션</button>
+        </div>
+        
+        <div>
+            <button onclick="simulateGameStart()">게임 시작 시뮬레이션</button>
+            <button onclick="toggleGameSpeed()">게임 속도 변경 (현재: <span id="speedIndicator">1.0x</span>)</button>
+        </div>
+        
+        <div class="info-panel">
+            <div>현재 연결된 플레이어: <span id="connectedPlayers">0</span>/2</div>
+            <div>게임 상태: <span id="gameStatus">대기 중</span></div>
+            <div>프레임 레이트: <span id="frameRate">0</span> FPS</div>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="gameOver">
+            GAME OVER
+        </div>
+    </div>
+
+    <script type="module">
+        // Mock Multiplayer Manager
+        class MockMultiplayerManager {
+            constructor() {
+                this.playerId = `player_${Date.now()}_${Math.random()}`;
+                this.connected = false;
+                this.ping = Math.floor(Math.random() * 50) + 20; // 20-70ms
+                
+                this.gameState = {
+                    timestamp: Date.now(),
+                    enemies: [],
+                    buildings: new Map(),
+                    playerStats: {}
+                };
+                
+                this.connectedPlayers = new Set();
+                this.gameStarted = false;
+            }
+            
+            connect() {
+                this.connected = true;
+                console.log('Mock: Connected to server');
+                return Promise.resolve();
+            }
+            
+            simulatePlayerConnection(playerId) {
+                this.connectedPlayers.add(playerId);
+                document.getElementById('connectedPlayers').textContent = this.connectedPlayers.size;
+                
+                if (this.connectedPlayers.size >= 2) {
+                    document.getElementById('gameStatus').textContent = '매칭 완료';
+                }
+                
+                console.log(`Mock: Player ${playerId} connected`);
+            }
+            
+            simulateGameStart() {
+                if (this.connectedPlayers.size >= 2) {
+                    this.gameStarted = true;
+                    document.getElementById('gameStatus').textContent = '게임 진행 중';
+                    
+                    // 초기 게임 상태 설정
+                    this.connectedPlayers.forEach(playerId => {
+                        this.gameState.playerStats[playerId] = {
+                            coins: 100,
+                            hearts: 3,
+                            stage: 1
+                        };
+                        this.gameState.buildings.set(playerId, []);
+                    });
+                    
+                    // 게임 시작 이벤트 발생
+                    document.dispatchEvent(new CustomEvent('multiplayerGameStart', {
+                        detail: {
+                            roomId: 'mock_room',
+                            players: Array.from(this.connectedPlayers),
+                            initialState: this.gameState
+                        }
+                    }));
+                    
+                    console.log('Mock: Game started with', this.connectedPlayers.size, 'players');
+                } else {
+                    alert('최소 2명의 플레이어가 필요합니다!');
+                }
+            }
+            
+            isConnected() {
+                return this.connected;
+            }
+            
+            getPing() {
+                // 실시간으로 변하는 ping 시뮬레이션
+                return this.ping + Math.floor(Math.random() * 20) - 10;
+            }
+            
+            getLocalGameState() {
+                return this.gameState;
+            }
+            
+            getInterpolatedGameState() {
+                // 간단한 보간 시뮬레이션
+                return this.gameState;
+            }
+        }
+        
+        // 전역 변수
+        window.multiplayerManager = new MockMultiplayerManager();
+        window.isMultiplayer = true;
+        
+        // 테스트 함수들
+        window.simulatePlayer = function(playerId) {
+            multiplayerManager.simulatePlayerConnection(playerId);
+        };
+        
+        window.simulateGameStart = function() {
+            multiplayerManager.simulateGameStart();
+        };
+        
+        window.toggleGameSpeed = function() {
+            // config.js에서 gameSpeed 변경
+            const speeds = [0.5, 1.0, 1.5, 2.0];
+            const currentIndex = speeds.indexOf(window.config?.gameSpeed || 1.0);
+            const nextIndex = (currentIndex + 1) % speeds.length;
+            const newSpeed = speeds[nextIndex];
+            
+            if (window.config) {
+                window.config.gameSpeed = newSpeed;
+            }
+            
+            document.getElementById('speedIndicator').textContent = newSpeed + 'x';
+            console.log('Game speed changed to:', newSpeed);
+        };
+        
+        // FPS 측정
+        let lastFrameTime = Date.now();
+        let frameCount = 0;
+        
+        function measureFPS() {
+            frameCount++;
+            const now = Date.now();
+            
+            if (now - lastFrameTime >= 1000) {
+                document.getElementById('frameRate').textContent = frameCount;
+                frameCount = 0;
+                lastFrameTime = now;
+            }
+            
+            requestAnimationFrame(measureFPS);
+        }
+        
+        // 초기화
+        window.addEventListener('load', () => {
+            console.log('Mock multiplayer test page loaded');
+            
+            // FPS 측정 시작
+            measureFPS();
+            
+            // Mock 연결
+            multiplayerManager.connect();
+            
+            // 게임 로직 로드
+            const canvas = document.getElementById('gameCanvas');
+            
+            // Canvas를 전역으로 설정
+            window.canvas = canvas;
+            window.c = canvas.getContext('2d');
+            
+            // 기존 게임 로직 import
+            import('./js/index.js').then(() => {
+                console.log('Game logic loaded for multiplayer test');
+            }).catch(error => {
+                console.error('Failed to load game logic:', error);
+            });
+        });
+        
+        // 멀티플레이어 게임 시작 이벤트 리스너
+        document.addEventListener('multiplayerGameStart', (event) => {
+            console.log('Multiplayer game started!', event.detail);
+        });
+    </script>
+</body>
+</html>

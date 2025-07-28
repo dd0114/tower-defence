@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tower Defense - Multiplayer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Changa+One:ital@0;1&family=Hind+Siliguri:wght@300;400;500;600;700&family=Noto+Sans+Devanagari:wght@100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <style>
+        body {
+            background-color: black;
+            font-family: 'Changa One', cursive;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .connection-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: white;
+            text-align: center;
+        }
+        
+        .connection-panel button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        .connection-panel button:hover {
+            background: #45a049;
+        }
+        
+        .connection-panel button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        .status.connected {
+            background: rgba(76, 175, 80, 0.3);
+        }
+        
+        .status.disconnected {
+            background: rgba(244, 67, 54, 0.3);
+        }
+        
+        .status.waiting {
+            background: rgba(255, 193, 7, 0.3);
+        }
+        
+        .game-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 72px;
+            color: white;
+            -webkit-text-stroke: 3px black;
+            background: rgba(0, 0, 0, 0.8);
+        }
+        
+        .gradient {
+            position: absolute;
+            top: 600px;
+            width: 420px;
+            height: 120px;
+        }
+        
+        .gradient.left {
+            left: 0px;
+            background: linear-gradient(
+                to right top,
+                rgba(0,0,0, 0.8),
+                rgb(0,0,0,0),
+                rgb(0,0,0,0)
+            );
+        }
+        
+        .gradient.right {
+            left: 420px;
+            background: linear-gradient(
+                to left top,
+                rgba(0,0,0, 0.8),
+                rgb(0,0,0,0),
+                rgb(0,0,0,0)
+            );
+        }
+    </style>
+
+    <div class="connection-panel">
+        <h2>Multiplayer Tower Defense</h2>
+        <div id="status" class="status disconnected">Disconnected</div>
+        <button id="connectBtn">Connect to Server</button>
+        <button id="findMatchBtn" disabled>Find Match</button>
+        <div id="playerInfo" style="display: none;">
+            <p>Player ID: <span id="playerId"></span></p>
+            <p>Ping: <span id="ping">0</span>ms</p>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        
+        <div id="gameOver">
+            GAME OVER
+        </div>
+
+        <div class="gradient left"></div>
+        <div class="gradient right"></div>
+    </div>
+
+    <script type="module">
+        import { MultiplayerManager } from './js/multiplayer/MultiplayerManager.js';
+        
+        // 전역 변수들
+        let multiplayerManager;
+        let gameStarted = false;
+        
+        // DOM 요소들
+        const statusEl = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const findMatchBtn = document.getElementById('findMatchBtn');
+        const playerInfoEl = document.getElementById('playerInfo');
+        const playerIdEl = document.getElementById('playerId');
+        const pingEl = document.getElementById('ping');
+        
+        // 초기화
+        function init() {
+            multiplayerManager = new MultiplayerManager();
+            setupEventListeners();
+        }
+        
+        function setupEventListeners() {
+            connectBtn.addEventListener('click', connectToServer);
+            findMatchBtn.addEventListener('click', findMatch);
+            
+            // 멀티플레이어 이벤트
+            document.addEventListener('multiplayerGameStart', handleGameStart);
+            
+            // 연결 상태 업데이트
+            setInterval(updateUI, 1000);
+        }
+        
+        function connectToServer() {
+            statusEl.textContent = 'Connecting...';
+            statusEl.className = 'status waiting';
+            connectBtn.disabled = true;
+            
+            multiplayerManager.connect('ws://localhost:8080');
+            
+            // 연결 확인
+            setTimeout(() => {
+                if (multiplayerManager.isConnected()) {
+                    statusEl.textContent = 'Connected';
+                    statusEl.className = 'status connected';
+                    findMatchBtn.disabled = false;
+                    playerInfoEl.style.display = 'block';
+                    playerIdEl.textContent = multiplayerManager.playerId;
+                } else {
+                    statusEl.textContent = 'Connection Failed';
+                    statusEl.className = 'status disconnected';
+                    connectBtn.disabled = false;
+                }
+            }, 2000);
+        }
+        
+        function findMatch() {
+            statusEl.textContent = 'Finding match...';
+            statusEl.className = 'status waiting';
+            findMatchBtn.disabled = true;
+            
+            multiplayerManager.findMatch();
+        }
+        
+        function handleGameStart(event) {
+            console.log('Multiplayer game started!', event.detail);
+            gameStarted = true;
+            
+            statusEl.textContent = 'Game Started!';
+            statusEl.className = 'status connected';
+            
+            // 게임 로직 시작 (기존 index.js 로직과 연동)
+            startGame();
+        }
+        
+        function startGame() {
+            // Canvas 설정
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // 기존 게임 로직 import 및 실행
+            import('./js/index.js').then(() => {
+                console.log('Game logic loaded');
+            });
+        }
+        
+        function updateUI() {
+            if (multiplayerManager && multiplayerManager.isConnected()) {
+                pingEl.textContent = multiplayerManager.getPing();
+            }
+        }
+        
+        // 페이지 로드 시 초기화
+        window.addEventListener('load', init);
+        
+        // 연결 해제 처리
+        window.addEventListener('beforeunload', () => {
+            if (multiplayerManager && multiplayerManager.isConnected()) {
+                multiplayerManager.disconnect();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -16,6 +16,7 @@ import {Hearts} from './classes/Hearts.js';
 import {Stage} from './classes/Stage.js';
 import {CoinPlus} from './classes/Effect/CoinPlus.js';
 import {CoinMinus} from './classes/Effect/CoinMinus.js';
+import {MultiplayerManager} from './multiplayer/MultiplayerManager.js';
 
 const grid = config.grid
 
@@ -27,6 +28,10 @@ backGround.onload = () => {
   c.drawImage(backGround, 0, 0, canvas.width, canvas.height)
 }
 backGround.src = 'img/backGround.png'
+
+// 멀티플레이어 매니저 초기화
+const multiplayerManager = new MultiplayerManager();
+const isMultiplayer = true; // 싱글플레이어 모드와 구분
 
 const playerBoard = new PlayerBoard();
 const summonButton = new SummonButton();
@@ -73,15 +78,25 @@ function drawGrid() {
   }
 }
 
-const enemies = []
-const buildings = []
-const effects = []
+// 게임 상태 분리 (멀티플레이어용)
+let gameState = {
+  enemies: [],
+  buildings: [],
+  effects: [],
+  coins: new Coins(),
+  hearts: new Hearts(),
+  stage: new Stage()
+};
+
+// 렌더링용 상태 (보간된 상태)
+let renderState = {
+  enemies: [],
+  buildings: [],
+  effects: []
+};
+
 let activeTile = undefined
 let isMouseInSummonButton = false
-
-const coins = new Coins();
-const hearts = new Hearts();
-const stage = new Stage();
 
 const summonNum = 10
 
@@ -102,23 +117,51 @@ function animate(currentTime = 0) {
   
   const animationId = requestAnimationFrame(animate);
 
-  c.drawImage(backGround, 0, 0, canvas.width, canvas.height)
-  drawGrid()
-  playerBoard.update(pickedBuilding, mouse, hand, getReRollCost(), getRaiseCost())
-  coins.draw()
-  hearts.draw()
-  stage.draw()
-  // summonButton.update(isMouseInSummonButton, hand.handRankResult)
+  // 멀티플레이어 모드인 경우 서버 상태 기반으로 렌더링
+  if (isMultiplayer && multiplayerManager.isConnected()) {
+    updateMultiplayerGame(deltaTime);
+  } else {
+    updateSinglePlayerGame(deltaTime);
+  }
 
-  if (enemies.length === 0) {
-    stage.round += 1
-    const multiplier = 1 + ((1 / 5) * (stage.round - 1))
+  // 공통 렌더링
+  renderGame();
+}
+
+function updateMultiplayerGame(deltaTime) {
+  // 서버에서 보간된 상태 가져오기
+  const interpolatedState = multiplayerManager.getInterpolatedGameState();
+  const localState = multiplayerManager.getLocalGameState();
+  
+  // 렌더링 상태 업데이트
+  renderState.enemies = interpolatedState.enemies || [];
+  renderState.buildings = Array.from(localState.buildings.values()).flat() || [];
+  
+  // 로컬 효과 업데이트 (서버와 무관한 시각적 효과)
+  updateLocalEffects(deltaTime);
+  
+  // UI 상태 업데이트
+  const playerStats = localState.playerStats[multiplayerManager.playerId];
+  if (playerStats) {
+    gameState.coins.balance = playerStats.coins;
+    gameState.hearts.life = playerStats.hearts;
+    gameState.stage.round = playerStats.stage || 1;
+  }
+}
+
+function updateSinglePlayerGame(deltaTime) {
+  // 기존 싱글플레이어 로직
+  playerBoard.update(pickedBuilding, mouse, hand, getReRollCost(), getRaiseCost())
+  
+  if (gameState.enemies.length === 0) {
+    gameState.stage.round += 1
+    const multiplier = 1 + ((1 / 5) * (gameState.stage.round - 1))
     const monsterNum = (summonNum * multiplier)
 
     const icon = Enemy.selectIcon();
     for (let i = 1; i < monsterNum + 1; i++) {
       const yOffset = (i * grid * summonNum) / monsterNum
-      enemies.push(
+      gameState.enemies.push(
         new Enemy({
             position: {
               x: waypoints[0].x,
@@ -131,35 +174,36 @@ function animate(currentTime = 0) {
     }
   }
 
-  for (let i = enemies.length - 1; 0 <= i; i--) {
-    const enemy = enemies[i];
+  updateEnemies(deltaTime);
+  updateBuildings(deltaTime);
+  updateLocalEffects(deltaTime);
+  
+  // 렌더링 상태 = 게임 상태
+  renderState = gameState;
+}
+
+function updateEnemies(deltaTime) {
+  for (let i = gameState.enemies.length - 1; 0 <= i; i--) {
+    const enemy = gameState.enemies[i];
     enemy.update(deltaTime)
 
     if (enemy.waypointIndex === waypoints.length - 1 && enemy.position.y > canvas.height) {
-      hearts.life -= 1
-      enemies.splice(i, 1)
-      if (hearts.life === 0) {
+      gameState.hearts.life -= 1
+      gameState.enemies.splice(i, 1)
+      if (gameState.hearts.life === 0) {
         console.log("game over")
-        hearts.draw()
-        cancelAnimationFrame(animationId)
         document.querySelector('#gameOver').style.display = 'flex'
       }
     }
   }
+}
 
-  for (let i = enemies.length - 1; 0 <= i; i--) {
-    enemies[i].drawLifeBar()
-  }
-
-  // placementTiles.forEach((tile => {
-  //   tile.update(mouse)
-  // }))
-
-  buildings.forEach((building => {
+function updateBuildings(deltaTime) {
+  gameState.buildings.forEach((building => {
 
     building.target = null;
 
-    const validEnemies = enemies.map((enemy) => {
+    const validEnemies = gameState.enemies.map((enemy) => {
       const xDiff = enemy.center.x - building.center.x;
       const yDiff = enemy.center.y - building.center.y;
       const distance = Math.hypot(xDiff, yDiff);
@@ -167,7 +211,7 @@ function animate(currentTime = 0) {
       return {enemy, distance};
     }).filter(({enemy, distance}) => distance < enemy.radius + building.getRadius() && enemy.isInBoard()).sort((a, b) => a.distance - b.distance)
 
-    const n = 1; // 추출할 개수 설정
+    const n = 1;
     building.target = validEnemies.slice(0, n).map((item) => item.enemy)[0];
 
     if (!building.isPicked) {
@@ -175,60 +219,89 @@ function animate(currentTime = 0) {
     }
 
     for (let i = building.projectTiles.length - 1; 0 <= i; i--) {
-
       const tile = building.projectTiles[i]
       tile.update(deltaTime)
 
-      //when hit the enemy
       if (tile.isHitTheEnemy()) {
         tile.applyDamage()
 
-        //적 죽을 때 제거
         const tileEnemy = tile.enemy;
         if (tileEnemy.health <= 0 && tileEnemy.isDeath === false) {
           tileEnemy.isDeath = true
-          const index = enemies.findIndex((enemy) => {
+          const index = gameState.enemies.findIndex((enemy) => {
             return tileEnemy === enemy
           });
 
           if (index > -1) {
             let income = tileEnemy.reward;
-            coins.balance += income
-            enemies.splice(index, 1)
-            effects.push(new CoinPlus(tileEnemy.center, income))
+            gameState.coins.balance += income
+            gameState.enemies.splice(index, 1)
+            gameState.effects.push(new CoinPlus(tileEnemy.center, income))
           }
         }
         building.projectTiles.splice(i, 1)
       }
     }
-
-    //돈 획득
-    for (let i = effects.length - 1; 0 <= i; i--) {
-      let effect = effects[i];
-      effect.update(deltaTime)
-      if (effect.isEnd()) {
-        effects.splice(i, 1)
-      }
-    }
-
-    //드래그된 빌딩 그리기
-    if (pickedBuilding) {
-      pickedBuilding.drawDragging(mouse.x, mouse.y)
-
-      // //판매 가격 표시
-      // c.fillStyle = 'black';
-      // c.font = `bold ${grid * 0.25}px "Changa One", "Noto Sans", sans-serif`;
-      // c.textAlign = "center";
-      // c.textBaseline = "middle";
-      //
-      // c.fillText('💰', mouse.x - grid * 0.1, mouse.y);
-      //
-      // const sellingPrice = pickedBuilding.getSellingMultiplier() * getReRollCost()
-      // c.fillText(sellingPrice.toString(), mouse.x + grid * 0.3, mouse.y);
-
-    }
   }))
+}
 
+function updateLocalEffects(deltaTime) {
+  for (let i = gameState.effects.length - 1; 0 <= i; i--) {
+    let effect = gameState.effects[i];
+    effect.update(deltaTime)
+    if (effect.isEnd()) {
+      gameState.effects.splice(i, 1)
+    }
+  }
+}
+
+function renderGame() {
+  c.drawImage(backGround, 0, 0, canvas.width, canvas.height)
+  drawGrid()
+  
+  if (!isMultiplayer) {
+    playerBoard.update(pickedBuilding, mouse, hand, getReRollCost(), getRaiseCost())
+  }
+  
+  gameState.coins.draw()
+  gameState.hearts.draw()
+  gameState.stage.draw()
+  
+  // 적 렌더링
+  renderState.enemies.forEach(enemy => {
+    if (enemy.draw) enemy.draw();
+    if (enemy.drawLifeBar) enemy.drawLifeBar();
+  });
+  
+  // 건물 렌더링
+  renderState.buildings.forEach(building => {
+    if (building.draw) building.draw();
+  });
+  
+  // 효과 렌더링
+  gameState.effects.forEach(effect => {
+    if (effect.draw) effect.draw();
+  });
+
+  // 드래그된 빌딩 그리기
+  if (pickedBuilding) {
+    pickedBuilding.drawDragging(mouse.x, mouse.y)
+  }
+  
+  // 멀티플레이어 UI
+  if (isMultiplayer && multiplayerManager.isConnected()) {
+    drawMultiplayerUI();
+  }
+}
+
+function drawMultiplayerUI() {
+  // Ping 표시
+  c.fillStyle = 'white';
+  c.font = '16px Arial';
+  c.fillText(`Ping: ${multiplayerManager.getPing()}ms`, 10, 30);
+  
+  // 연결 상태
+  c.fillText('Connected', 10, 50);
 }
 
 const mouse = {
@@ -249,23 +322,23 @@ window.addEventListener('click', (event) => {
   }
 
   const cardCost = getReRollCost()
-  if (buildings.length < 11 && hand.isEmpty() && isMouseInSummonButton && !pickedBuilding && coins.balance >= cardCost && canEditCard) {
+  if (gameState.buildings.length < 11 && hand.isEmpty() && isMouseInSummonButton && !pickedBuilding && gameState.coins.balance >= cardCost && canEditCard) {
     // reRoll
     reRoll()
 
     const {x, y} = playerBoard.centerButton.center;
-    effects.push(new CoinMinus({x, y}, cardCost))
+    gameState.effects.push(new CoinMinus({x, y}, cardCost))
     return;
   }
 
   const raiseCost = getRaiseCost()
 
-  if (buildings.length < 15 && !pickedBuilding && !hand.isEmpty() && playerBoard.raiseButtion.isMouseInside(mouse) && coins.balance >= raiseCost && canEditCard) {
+  if (gameState.buildings.length < 15 && !pickedBuilding && !hand.isEmpty() && playerBoard.raiseButtion.isMouseInside(mouse) && gameState.coins.balance >= raiseCost && canEditCard) {
     // raise
-    coins.balance -= raiseCost
+    gameState.coins.balance -= raiseCost
     drawRandomCard()
     const {x, y} = playerBoard.raiseButtion.center;
-    effects.push(new CoinMinus({x, y}, raiseCost))
+    gameState.effects.push(new CoinMinus({x, y}, raiseCost))
     return;
   }
 
@@ -277,9 +350,9 @@ window.addEventListener('click', (event) => {
 
       const handRankResult = {...hand.handRankResult}
 
-      for (let i = buildings.length - 1; 0 <= i; i--) {
+      for (let i = gameState.buildings.length - 1; 0 <= i; i--) {
         // 빌딩 순회
-        let building = buildings[i];
+        let building = gameState.buildings[i];
         let buildingCard = building.card;
 
         if (buildingCard) {
@@ -301,9 +374,9 @@ window.addEventListener('click', (event) => {
     if (playerBoard.dieButton.isMouseInside(mouse)) {
       canEditCard = false
 
-      for (let i = buildings.length - 1; 0 <= i; i--) {
+      for (let i = gameState.buildings.length - 1; 0 <= i; i--) {
         // 빌딩 순회
-        let building = buildings[i];
+        let building = gameState.buildings[i];
         let buildingCard = building.card;
 
         if (buildingCard) {
@@ -357,9 +430,9 @@ window.addEventListener('mousedown', (event) => {
     isDragging = false
 
     if (pickedBuilding === null) {
-      for (let i = buildings.length - 1; 0 <= i; i--) {
+      for (let i = gameState.buildings.length - 1; 0 <= i; i--) {
         if (pickedBuilding === null) {
-          let building = buildings[i];
+          let building = gameState.buildings[i];
           if (building.isMouseIn(mouse)) {
             pickedBuilding = building
             building.isPicked = true
@@ -406,13 +479,13 @@ function isInObject(position, object) {
 }
 
 function getReRollCost() {
-  return cardPrice * (1 + buildings.filter((building) => {
+  return cardPrice * (1 + gameState.buildings.filter((building) => {
     return building.rankTower
   }).length)
 }
 
 function getRaiseCost() {
-  const numOfCard = buildings.filter((building) => {
+  const numOfCard = gameState.buildings.filter((building) => {
     return building.card
   }).length;
 
@@ -431,11 +504,11 @@ function removeBuilding(building) {
   }
 
   if (building.rankTower) {
-    coins.balance += building.getSellingMultiplier() * getReRollCost()
+    gameState.coins.balance += building.getSellingMultiplier() * getReRollCost()
   }
 
-  let index = buildings.findIndex(b => b.position.x === building.position.x && b.position.y === building.position.y);
-  buildings.splice(index, 1)
+  let index = gameState.buildings.findIndex(b => b.position.x === building.position.x && b.position.y === building.position.y);
+  gameState.buildings.splice(index, 1)
 
   placementTiles.forEach((tile) => {
     if (tile.position.x === building.position.x && tile.position.y === building.position.y) {
@@ -455,8 +528,8 @@ function draw() {
 function drawOneCard() {
 
   const card = draw()
-  coins.balance -= getReRollCost()
-  buildings.push(new Building({
+  gameState.coins.balance -= getReRollCost()
+  gameState.buildings.push(new Building({
     position: {
       x: activeTile.position.x,
       y: activeTile.position.y
@@ -469,7 +542,7 @@ function drawOneCard() {
 function reRoll() {
   canEditCard = false
   getReRollCost()
-  coins.balance -= getReRollCost()
+  gameState.coins.balance -= getReRollCost()
 
   for (let i = 0; i < 5; i++) {
     drawRandomCard()
@@ -485,7 +558,7 @@ function drawRandomCard() {
 
   let randomIndex = Math.floor(Math.random() * 1000000) % availableTiles.length;
   let placementTile = availableTiles[randomIndex];
-  buildings.push(new Building({
+  gameState.buildings.push(new Building({
     position: {
       x: placementTile.position.x,
       y: placementTile.position.y

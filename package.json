@@ -2,18 +2,30 @@
   "name": "tower-defence",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "author": "dd0114 <89336928+dd0114@users.noreply.github.com>",
   "license": "MIT",
-  "description": "test",
+  "description": "Multiplayer Tower Defense Game",
   "directories": {
     "test": "test"
   },
   "scripts": {
-    "test": "jest --watchAll --verbose"
+    "test": "jest --watchAll --verbose",
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js"
   },
-  "keywords": [],
+  "keywords": [
+    "game",
+    "multiplayer",
+    "tower-defense",
+    "websocket"
+  ],
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2"
   }
 }
