@@ -34,7 +34,7 @@ export class ProjectTile {
     }
   }
 
-  update() {
+  update(deltaTime = 16.67) {
     this.draw()
 
     const angle = Math.atan2(
@@ -42,8 +42,11 @@ export class ProjectTile {
       this.enemy.center.x - this.position.x
     )
 
-    this.position.x += Math.cos(angle) * this.speed * (this.projectTileInfo?.speed ?? 1)
-    this.position.y += Math.sin(angle) * this.speed * (this.projectTileInfo?.speed ?? 1)
+    // deltaTime 기반 속도 계산 (60fps 기준으로 정규화)
+    const normalizedSpeed = this.speed * (this.projectTileInfo?.speed ?? 1) * (deltaTime / 16.67)
+    
+    this.position.x += Math.cos(angle) * normalizedSpeed
+    this.position.y += Math.sin(angle) * normalizedSpeed
   }
 
   isHitTheEnemy() {
